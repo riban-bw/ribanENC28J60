@@ -5,14 +5,16 @@
 static const uint16_t DEST_MAC_OFFSET   = 0;
 static const uint16_t SRC_MAC_OFFSET    = 6;
 static const uint16_t SIZE_TYPE_OFFSET  = 12;
+static const uint16_t MAC_HEADER_SIZE   = 14;
 
 ribanENC28J60::ribanENC28J60(Address& addressMac, byte nChipSelectPin) :
-    m_nChipSelectPin(nChipSelectPin)
+    m_nChipSelectPin(nChipSelectPin),
+    m_nNicVersion(0)
 {
     m_pHandleTxError = NULL;
     m_pRemoteMac = new Address(ADDR_TYPE_MAC);
     m_pLocalMac = new Address(ADDR_TYPE_MAC, addressMac.GetAddress());
-    m_nic.Initialize(addressMac.GetAddress(), nChipSelectPin);
+    m_nNicVersion = m_nic.Initialize(addressMac.GetAddress(), nChipSelectPin);
 
     #ifdef IP4
     m_pIpv4 = new IPV4(&m_nic);
@@ -30,44 +32,58 @@ ribanENC28J60::~ribanENC28J60()
     delete m_pLocalMac;
 }
 
-void ribanENC28J60::Process()
+byte ribanENC28J60::GetNicVersion()
 {
-    /*
-        Read each packet
-        Identify Ethertype
-        Process using protocol handler
-    */
-    uint16_t nQuant = m_nic.RxBegin();
-    if(nQuant >= 14) //minimum Ethernet header size
+    return m_nNicVersion;
+}
+
+byte ribanENC28J60::Process()
+{
+    if(0 == m_nNicVersion)
+        return 0; //Not correctly initialised so do nothing
+
+    byte nRxCnt = 0;
+    while(uint16_t nQuant = m_nic.RxBegin())
     {
-        //Get Ethertype from Ethernet header - ignore destination and source MAC for now
-        uint16_t nType = m_nic.RxGetByte(12);
-        switch(nType)
+        if(nQuant >= MAC_HEADER_SIZE)
         {
-            #ifdef IP4
-            case ETHTYPE_ARP:
-                Serial.println("ARP packet recieved");
-                m_pIpv4->ProcessArp(nQuant);
-                break;
-            case ETHTYPE_IPV4:
-                Serial.println("IPV4 packet recieved");
-                m_pIpv4->Process(nQuant);
-                break;
-            #endif // IP4
-            #ifdef IP6
-            case ETHTYPE_IPV6:
-                Serial.println("IPV6 packet recieved");
-                m_pIpv6->Process(nType, nQuant);
-                break;
-            #endif // IP6
+            //Get Ethertype from Ethernet header - ignore destination and source MAC for now
+            uint16_t nType = m_nic.RxGetByte(SIZE_TYPE_OFFSET);
+            switch(nType)
+            {
+                #ifdef IP4
+                case ETHTYPE_ARP:
+                    #ifdef _DEBUG_
+                    Serial.println("ARP packet recieved");
+                    #endif //_DEBUG_
+                    m_pIpv4->ProcessArp(nQuant); //!@todo Consider ARP messages for other protocols
+                    break;
+                case ETHTYPE_IPV4:
+                    #ifdef _DEBUG_
+                    Serial.println("IPV4 packet recieved");
+                    #endif //_DEBUG_
+                    m_pIpv4->Process(nQuant - MAC_HEADER_SIZE);
+                    break;
+                #endif // IP4
+                #ifdef IP6
+                case ETHTYPE_IPV6:
+                    #ifdef _DEBUG_
+                    Serial.println("IPV6 packet recieved");
+                    #endif //_DEBUG_
+                    m_pIpv6->Process(nType, nQuant - MAC_HEADER_SIZE);
+                    break;
+                #endif // IP6
+            }
         }
+        if(m_pHandleTxError && m_nic.TxGetStatus() == ENC28J60_TX_FAILED)
+        {
+            m_pHandleTxError();
+            m_nic.TxClearError();
+        }
+        m_nic.RxEnd();
+        ++nRxCnt;
     }
-    if(m_pHandleTxError && m_nic.TxGetStatus() == ENC28J60_TX_FAILED)
-    {
-        m_pHandleTxError();
-        m_nic.TxClearError();
-    }
-    m_nic.RxEnd();
+    return nRxCnt;
 }
 
 //void ribanENC28J60::TxPacket(TxListEntry* pSendList, byte* pDestination)

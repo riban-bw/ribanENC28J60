@@ -53,13 +53,19 @@ void IPV4::Process(uint16_t nLen)
 
 void IPV4::ProcessArp(uint16_t nLen)
 {
-    byte pBuffer[30];
-    m_pInterface->RxGetData(pBuffer, 30);
-    //ARP message
+    if(nLen < 28)
+        return; //IPV4 ARP message is 28 bytes
+    byte pBuffer[28];
+    m_pInterface->RxGetData(pBuffer, sizeof pBuffer, MAC_HEADER_SIZE);
+
+    //Assume ARP header is valid IPV4 ARP
+
     if(pBuffer[ARP_OPER] == ARP_REQUEST)
     {
         if(m_pLocalIp->GetAddress() != pBuffer + ARP_TPA)
             return; //Not for me
+
+        //!@todo consider whether using DMA would be advantagous
 
         //ARP request - Create response, reusing Rx buffer
         pBuffer[ARP_OPER] = 2; //Change type to reply
@@ -79,7 +85,7 @@ void IPV4::ProcessArp(uint16_t nLen)
         Serial.println();
         #endif // _DEBUG_
     }
-    else if(pBuffer[7] == ARP_RESPONSE)
+    else if(pBuffer[ARP_OPER] == ARP_RESPONSE)
     {
         //ARP reply
         for(byte i = 0; i < ARP_TABLE_SIZE; ++i)
@@ -94,41 +100,45 @@ void IPV4::ProcessArp(uint16_t nLen)
     }
 }
 
-bool IPV4::ProcessIcmp(byte* pData, uint16_t nLen)
+bool IPV4::ProcessIcmp(uint16_t nLen)
 {
-//    if(nLen < ICMP_HEADER_SIZE)
-//        return false;
-//    byte nType = pData[0];
-////    byte nCode = pData[1];
-//    if(ribanEthernetProtocol::CreateChecksum(pData, nLen))
-//        return true; //ICMP with invalid checksum
-//        //!@todo Create error on checksum error
-//    switch(nType)
-//    {
-//        case ICMP_TYPE_ECHOREPLY:
-//            //This is a response to an echo request (ping) so call our hanlder if defined
-//            if(m_pHandleEchoResponse)
-//                m_pHandleEchoResponse((*(pData + 6) << 8) + (*(pData + 7) & 0xFF)); //!@todo Pass parameters to handler?
-//            //!@todo This may be prone to DoS attack by targetting unsolicited echo responses at this host - may be less significant than limited recieve handling
-//            break;
-//        case ICMP_TYPE_ECHOREQUEST:
-//            if(m_bIcmpEnabled)
-//            {
-//                //This is an echo request (ping) from a remote host so send an echo reply (pong)
-//                //Reuse recieve buffer and send reply
-//                pData[0] = ICMP_TYPE_ECHOREPLY;
-//                pData[ICMP_CHECKSUM_OFFSET] = 0;
-//                pData[ICMP_CHECKSUM_OFFSET + 1] = 0;
-//                uint16_t nChecksum = ribanEthernetProtocol::CreateChecksum(pData, nLen);
-//                pData[ICMP_CHECKSUM_OFFSET] = nChecksum >> 8;;
-//                pData[ICMP_CHECKSUM_OFFSET + 1] = nChecksum & 0xFF;
-//                SendPacket(pData, nLen, IP_PROTOCOL_ICMP);
-//                break;
-//            }
-//        default:
-//            //Unhandled messgae types
-//            ;
-//    }
+    if(nLen < ICMP_HEADER_SIZE)
+        return false;
+    byte pHeader[ICMP_HEADER_SIZE];
+    m_pInterface->RxGetData(pHeader, ICMP_HEADER_SIZE, MAC_HEADER_SIZE + IPV4_HEADER_SIZE);
+//    byte nCode = pData[ICMP_OFFSET_CODE]; //Code not actually used by library
+    //!@todo Check ICMP checksum
+    m_pInterface->DMACopy(0, 0, nLen);
+    m_pInterface->TxWriteWord(ICMP_OFFSET_CHECKSUM, 0);
+    if(m_pInterface->RxGetWord(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + ICMP_CHECKSUM_OFFSET) != m_pInterface->GetChecksum(0, ICMP_HEADER_SIZE))
+       return false; //Fails checksum
+    switch(pHeader[ICMP_OFFSET_TYPE])
+    {
+        case ICMP_TYPE_ECHOREPLY:
+            //This is a response to an echo request (ping) so call our hanlder if defined
+            if(m_pHandleEchoResponse)
+                m_pHandleEchoResponse((m_pInterface->RxGetWord(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + 6)); //!@todo Pass parameters to handler?
+            //!@todo This may be prone to DoS attack by targetting unsolicited echo responses at this host - may be less significant than limited recieve handling
+            break;
+        case ICMP_TYPE_ECHOREQUEST:
+            if(m_bIcmpEnabled)
+            {
+                //This is an echo request (ping) from a remote host so send an echo reply (pong)
+                //Reuse recieve buffer and send reply
+                m_pInterface->TxBegin();
+                m_pInterface->DMACopy(0, 0, MAC_HEADER_SIZE + IPV4_HEADER_SIZE + nLen);
+                //!@todo Swap MACs
+                //!@todo Swap IPs
+                m_pInterface->WriteByte(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + ICMP_OFFSET_TYPE, ICMP_TYPE_ECHOREPLY);
+                m_pInterface->WriteWord(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + ICMP_OFFSET_CHECKSUM, 0);
+                m_pInterface->WriteWord(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + ICMP_OFFSET_CHECKSUM, m_pInterface->GetChecksum(MAC_HEADER_SIZE + IPV4_HEADER_SIZE, nLen));
+                m_pInterface->TxEnd();
+            }
+            break;
+        default:
+            //Unhandled message types
+            ;
+    }
     return true; //Valid ICMP message
 }
 
@@ -370,7 +380,7 @@ void IPV4::TxBegin(Address* pDestination)
     if(pDestination)
         memcpy(pBuffer + IPV4_DESTINATION_IP_OFFSET, pDestination->GetAddress(), pDestination->GetSize());
     else
-        m_pInterface->DMACopy(14 + IPV4_SOURCE_IP_OFFSET, 14 + IPV4_SOURCE_IP_OFFSET + 4, IPV4_DESTINATION_IP_OFFSET);
+        m_pInterface->DMACopy(IPV4_DESTINATION_IP_OFFSET, MAC_HEADER_SIZE + IPV4_SOURCE_IP_OFFSET, 4);
     m_pInterface->TxAppend(pBuffer, 20); //Populate IP header
     //Total length and header checksum are not set. Need to set these in TxEnd().
     //Protocol not set. Need to set this in child protocol routine???
@@ -387,4 +397,10 @@ void IPV4::TxEnd(uint16_t nLen)
 //    pHeader[4] = (IPV4_HEADER_SIZE + pTxListEntry->GetLen()) >> 8; //Populate total length
 //    pHeader[5] = (IPV4_HEADER_SIZE + pTxListEntry->GetLen()) & 0xFF;
 
+}
+
+void IPV4::TxSwap(uint16_t nOffset1, uint16_t nOffset2, byte nLen)
+{
+    byte pBuffer[nLen];
+    m_pInterface->
 }

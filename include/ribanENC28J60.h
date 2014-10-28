@@ -49,7 +49,10 @@ const static unsigned int ETHTYPE_IEEE801_10    = 0x8100;
 const static unsigned int ETHTYPE_IPV6          = 0x86DD;
 
 
-/** @brief  This class provides an Ethernet interface
+/** @brief  This class provides an Ethernet interface with minimal IP protocol
+*   @note   Use #define IP6 to enable IPV6. Use #undefine IP4 to disable IPV4
+*   @note   Check initialisation is successful by calling GetNicVersion() which should be non-zero.
+*   @note   Call Process() regularly (e.g. within main program loop)
 */
 class ribanENC28J60
 {
@@ -66,10 +69,16 @@ class ribanENC28J60
         */
         virtual ~ribanENC28J60();
 
+        /** @brief  Get the ENC28J60 silicon version
+        *   @return <i>byte</i> Version. Zero if not correctly initialised
+        */
+        byte GetNicVersion();
+
         /** @brief  Process recieved data and send any pending data
+        *   @return <i>byte</i> Quantity of packets processed (including unrecognised and invalid packets)
         *   @note   Processes default protocols then iterates through sockets then drops unprocessed packets
         */
-        void Process();
+        byte Process();
 
         /** @brief  Set the handler function for transmission errors
         *   @param  TxErrorHandler Pointer to error handler function
@@ -127,6 +136,7 @@ class ribanENC28J60
         void (*m_pHandleTxError)(); //!< Pointer to function to handle Tx error
 
         ENC28J60 m_nic; //!< ENC28J60 network interface object
+        byte m_nNicVersion; //!< ENC28J60 silicon version - zero if ENC28J60 not initialised succesfully
         #ifdef IP4
         IPV4* m_pIpv4; //!< Pointer to IPV4 protocol hander
         #endif // IP4

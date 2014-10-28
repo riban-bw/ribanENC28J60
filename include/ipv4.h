@@ -11,6 +11,8 @@
 
 class ENC28J60;
 
+const static uint16_t MAC_HEADER_SIZE = 14;
+
 const static uint16_t IPV4_HEADER_SIZE = 20;
 const static uint16_t IPV4_MINLEN = 26;
 const static uint16_t IPV4_SOURCE_IP_OFFSET = 12;
@@ -28,10 +30,13 @@ const static uint16_t IP_PROTOCOL_SCTP  = 132;
 const static unsigned int ARP_GATEWAY_INDEX = 0;
 const static unsigned int ARP_DNS_INDEX = 1;
 
-const static uint16_t ICMP_HEADER_SIZE = 8;
-const static byte ICMP_TYPE_ECHOREPLY = 0;
-const static byte ICMP_TYPE_ECHOREQUEST = 8;
-const static uint16_t ICMP_CHECKSUM_OFFSET = 2;
+const static uint16_t ICMP_HEADER_SIZE      = 8;
+const static byte ICMP_TYPE_ECHOREPLY       = 0;
+const static byte ICMP_TYPE_ECHOREQUEST     = 8;
+const static uint16_t ICMP_CHECKSUM_OFFSET  = 2;
+const static uint16_t ICMP_OFFSET_TYPE      = 0;
+const static uint16_t ICMP_OFFSET_CODE      = 1;
+const static uint16_t ICMP_OFFSET_CHECKSUM  = 2;
 
 const static byte DHCP_DISABLED     = 0; //!< DHCP disabled
 const static byte DHCP_RESET        = 1; //!< DHCP enabled but not yet requested
@@ -115,6 +120,7 @@ class IPV4
 
         /** @brief  Process ARP packet
         *   @param  nLen Quantity of bytes in ARP packet
+        *   @note   Assumes valid IPV4 ARP header
         */
         void ProcessArp(uint16_t nLen);
 
@@ -172,11 +178,10 @@ class IPV4
         uint16_t DoProcess(byte* pBuffer, uint16_t nLen);
 
         /** @brief  Check for ICMP and process
-        *   @param  pData Pointer to packet data payload
         *   @param  nLen Quantity of bytes in payload
         *   @return <i>bool</i> True if ICMP packet processed
         */
-        bool ProcessIcmp(byte* pData, uint16_t nLen);
+        bool ProcessIcmp(uint16_t nLen);
 
         /** @brief  Checks whether IP address is same as local host IP address
         *   @param  pIp IP address to check
@@ -201,6 +206,13 @@ class IPV4
         *   @return <i>bool</i> True if a multicast address
         */
         bool IsMulticast(byte* pIp);
+
+        /** @brief  Swaps arrays of bytes within TxBuffer
+        *   @param  nOffset1 Offset of first array
+        *   @param  nOffset2 Offset of second array
+        *   @param  nLen Quantity of bytes in each array
+        */
+        void TxSwap(uint16_t nOffset1, uint16_t nOffset2, byte nLen);
 
         bool m_bIcmpEnabled; //!< True to enable ICMP responses
         Address* m_pLocalIp; //!< IP address of remote host

@@ -22,7 +22,14 @@ void setup()
 void loop()
 {
     if(g_pNIC)
-        g_pNIC->Process();
+    {
+        byte nRxCnt = g_pNIC->Process();
+        if(nRxCnt)
+        {
+            Serial.print("Rx packets: ");
+            Serial.println(nRxCnt);
+        }
+    }
     if(Serial.available() > 0)
     {
         char cInput = Serial.read();
@@ -256,7 +263,8 @@ bool TestInitialisation()
     Address addressMAC(ADDR_TYPE_MAC, pMac);
     addressMAC.PrintAddress(); Serial.println();
     g_pNIC = new ribanENC28J60(addressMAC, ETHERNET_CS_PIN);
-    return(addressMAC == g_pNIC->GetMac()->GetAddress());
+    //Check ENC28J60 object created, it has non-zero version (has been initialised) and that it has the same hardware address as we requested
+    return g_pNIC && (0 != g_pNIC->GetNicVersion()) && (addressMAC == g_pNIC->GetMac()->GetAddress());
 }
 
 bool TestSendIPV4()
