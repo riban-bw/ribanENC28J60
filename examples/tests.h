@@ -11,9 +11,14 @@ void ShowMenu();
 */
 bool TestAddress();
 
-/** @brief  Test that nic initialises without error
+/** @brief  Test that nic initialises without error and GetMac() works
 *   @return True on success
 */
 bool TestInitialisation();
+
+/** @brief  Test sending IPV4 packet
+*   @return True on success
+*/
+bool TestSendIPV4();
 
 ribanENC28J60* g_pNIC; //Pointer to the network interface

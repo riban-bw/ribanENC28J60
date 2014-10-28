@@ -7,9 +7,6 @@
 
 static const byte ETHERNET_CS_PIN = 10;
 
-byte g_nTest; //Current test number
-
-
 /** Initialisation */
 void setup()
 {
@@ -257,6 +254,14 @@ bool TestInitialisation()
         delete g_pNIC;
     byte pMac[6] = {0x12,0x34,0x56,0x78,0x9A,0xBC};
     Address addressMAC(ADDR_TYPE_MAC, pMac);
+    addressMAC.PrintAddress(); Serial.println();
     g_pNIC = new ribanENC28J60(addressMAC, ETHERNET_CS_PIN);
     return(addressMAC == g_pNIC->GetMac()->GetAddress());
+}
+
+bool TestSendIPV4()
+{
+    if(!g_pNIC)
+        TestInitialisation();
+    return true;
 }

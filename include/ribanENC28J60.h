@@ -60,7 +60,7 @@ class ribanENC28J60
         *   @param  nChipSelectPin Arduino pin number used as chip select. Default = 10.
         *   @todo   Should constructor and begin() be seperate?
         */
-        ribanENC28J60(Address addressMAC, byte nChipSelectPin = 10);
+        ribanENC28J60(Address& addressMAC, byte nChipSelectPin = 10);
 
         /** @brief  Destructs interface and tidies up
         */
@@ -69,7 +69,7 @@ class ribanENC28J60
         /** @brief  Process recieved data and send any pending data
         *   @note   Processes default protocols then iterates through sockets then drops unprocessed packets
         */
-        uint16_t Process();
+        void Process();
 
         /** @brief  Set the handler function for transmission errors
         *   @param  TxErrorHandler Pointer to error handler function

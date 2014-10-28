@@ -6,31 +6,31 @@ static const uint16_t DEST_MAC_OFFSET   = 0;
 static const uint16_t SRC_MAC_OFFSET    = 6;
 static const uint16_t SIZE_TYPE_OFFSET  = 12;
 
-ribanENC28J60::ribanENC28J60(Address addressMac, byte nChipSelectPin) :
+ribanENC28J60::ribanENC28J60(Address& addressMac, byte nChipSelectPin) :
     m_nChipSelectPin(nChipSelectPin)
 {
     m_pHandleTxError = NULL;
-    m_pLocalMac = new Address(ADDR_TYPE_MAC);
     m_pRemoteMac = new Address(ADDR_TYPE_MAC);
-
+    m_pLocalMac = new Address(ADDR_TYPE_MAC, addressMac.GetAddress());
     m_nic.Initialize(addressMac.GetAddress(), nChipSelectPin);
 
     #ifdef IP4
     m_pIpv4 = new IPV4(&m_nic);
+    Serial.println("Initialised IPV4 handler");
     #endif // IP4
     #ifdef IP6
     m_pIpv6 = new IPV6(&m_nic);
+    Serial.println("Initialised IPV6 handler");
     #endif // IP6
-
 }
 
 ribanENC28J60::~ribanENC28J60()
 {
-    delete m_pLocalMac;
     delete m_pRemoteMac;
+    delete m_pLocalMac;
 }
 
-uint16_t ribanENC28J60::Process()
+void ribanENC28J60::Process()
 {
     /*
         Read each packet
@@ -46,14 +46,17 @@ uint16_t ribanENC28J60::Process()
         {
             #ifdef IP4
             case ETHTYPE_ARP:
+                Serial.println("ARP packet recieved");
                 m_pIpv4->ProcessArp(nQuant);
                 break;
             case ETHTYPE_IPV4:
+                Serial.println("IPV4 packet recieved");
                 m_pIpv4->Process(nQuant);
                 break;
             #endif // IP4
             #ifdef IP6
             case ETHTYPE_IPV6:
+                Serial.println("IPV6 packet recieved");
                 m_pIpv6->Process(nType, nQuant);
                 break;
             #endif // IP6
@@ -65,7 +68,6 @@ uint16_t ribanENC28J60::Process()
         m_nic.TxClearError();
     }
     m_nic.RxEnd();
-    return nQuant;
 }
 
 //void ribanENC28J60::TxPacket(TxListEntry* pSendList, byte* pDestination)
