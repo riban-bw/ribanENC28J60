@@ -47,6 +47,9 @@
 			<Mode after="always" />
 		</ExtraCommands>
 		<Unit filename="include/address.h" />
+		<Unit filename="include/constants.h">
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
 		<Unit filename="include/ipv4.h" />
 		<Unit filename="include/ribanENC28J60.h" />
 		<Unit filename="include/socket.h" />

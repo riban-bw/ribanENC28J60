@@ -68,6 +68,8 @@ class Address
         */
         void PrintAddress();
 
+        //!@todo Add helper function to build address from string, e.g. Address("192.168.0.1") or Address("AA:BB:CC:DD:EE") or Address("0011:2233:4455:6677:8899:AABB:CCDD:EEFF")
+
     protected:
     private:
         byte m_nType; //!< Address type MAC | IPV4 | IPV6

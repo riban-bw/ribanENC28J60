@@ -2,14 +2,10 @@
 #include "enc28j60.h"
 #include <Arduino.h>
 
-static const uint16_t DEST_MAC_OFFSET   = 0;
-static const uint16_t SRC_MAC_OFFSET    = 6;
-static const uint16_t SIZE_TYPE_OFFSET  = 12;
-static const uint16_t MAC_HEADER_SIZE   = 14;
-
 ribanENC28J60::ribanENC28J60(Address& addressMac, byte nChipSelectPin) :
     m_nChipSelectPin(nChipSelectPin),
-    m_nNicVersion(0)
+    m_nNicVersion(0),
+    ipv4(&m_nic)
 {
     m_pHandleTxError = NULL;
     m_pRemoteMac = new Address(ADDR_TYPE_MAC);
@@ -17,7 +13,7 @@ ribanENC28J60::ribanENC28J60(Address& addressMac, byte nChipSelectPin) :
     m_nNicVersion = m_nic.Initialize(addressMac.GetAddress(), nChipSelectPin);
 
     #ifdef IP4
-    m_pIpv4 = new IPV4(&m_nic);
+//    m_pIpv4 = new IPV4(&m_nic);
     Serial.println("Initialised IPV4 handler");
     #endif // IP4
     #ifdef IP6
@@ -48,7 +44,9 @@ byte ribanENC28J60::Process()
         if(nQuant >= MAC_HEADER_SIZE)
         {
             //Get Ethertype from Ethernet header - ignore destination and source MAC for now
-            uint16_t nType = m_nic.RxGetByte(SIZE_TYPE_OFFSET);
+            uint16_t nType = m_nic.RxGetWord(MAC_OFFSET_TYPE);
+            Serial.print("Rx packet type: ");
+            Serial.println(nType);
             switch(nType)
             {
                 #ifdef IP4
@@ -56,13 +54,13 @@ byte ribanENC28J60::Process()
                     #ifdef _DEBUG_
                     Serial.println("ARP packet recieved");
                     #endif //_DEBUG_
-                    m_pIpv4->ProcessArp(nQuant); //!@todo Consider ARP messages for other protocols
+                    ipv4.ProcessArp(nQuant); //!@todo Consider ARP messages for other protocols
                     break;
                 case ETHTYPE_IPV4:
                     #ifdef _DEBUG_
                     Serial.println("IPV4 packet recieved");
                     #endif //_DEBUG_
-                    m_pIpv4->Process(nQuant - MAC_HEADER_SIZE);
+                    ipv4.Process(nQuant - MAC_HEADER_SIZE);
                     break;
                 #endif // IP4
                 #ifdef IP6
@@ -119,12 +117,7 @@ void ribanENC28J60::TxBegin(byte* pDestination)
     m_nic.TxAppend(m_pLocalMac->GetAddress(), 6);
 }
 
-void ribanENC28J60::TxEnd(uint16_t nLen)
+void ribanENC28J60::TxEnd()
 {
-    //Check if EtherType is define
-    uint16_t nType;
-    m_nic.TxRead(SIZE_TYPE_OFFSET, (byte*)&nType, 2u);
-    if(!nType)
-        m_nic.TxWrite(SIZE_TYPE_OFFSET, (byte*)&nLen, 2); //EtherType not defined so use packet length
     m_nic.TxEnd();
 }

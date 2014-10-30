@@ -39,15 +39,9 @@
 #include "ipv4.h"
 #include "socket.h"
 #include "address.h"
+#include "constants.h"
 
 #define IP4
-
-//Define EtherTypes
-const static unsigned int ETHTYPE_IPV4          = 0x0800;
-const static unsigned int ETHTYPE_ARP           = 0x0806;
-const static unsigned int ETHTYPE_IEEE801_10    = 0x8100;
-const static unsigned int ETHTYPE_IPV6          = 0x86DD;
-
 
 /** @brief  This class provides an Ethernet interface with minimal IP protocol
 *   @note   Use #define IP6 to enable IPV6. Use #undefine IP4 to disable IPV4
@@ -74,6 +68,9 @@ class ribanENC28J60
         */
         byte GetNicVersion();
 
+        /** @brief  Set static IP address
+        *   @param  Address
+
         /** @brief  Process recieved data and send any pending data
         *   @return <i>byte</i> Quantity of packets processed (including unrecognised and invalid packets)
         *   @note   Processes default protocols then iterates through sockets then drops unprocessed packets
@@ -97,9 +94,12 @@ class ribanENC28J60
         void TxBegin(byte* pDestination);
 
         /** @brief  Ends a transmission transaction
-        *   @param  nLen Quantity of bytes in child payload, including any grandchildren
         */
-        void TxEnd(uint16_t nLen);
+        void TxEnd();
+
+        #ifdef IP4
+        IPV4 ipv4;
+        #endif // IP4
 
     protected:
         /** @brief  Initialise class
@@ -138,7 +138,7 @@ class ribanENC28J60
         ENC28J60 m_nic; //!< ENC28J60 network interface object
         byte m_nNicVersion; //!< ENC28J60 silicon version - zero if ENC28J60 not initialised succesfully
         #ifdef IP4
-        IPV4* m_pIpv4; //!< Pointer to IPV4 protocol hander
+//        IPV4* m_pIpv4; //!< Pointer to IPV4 protocol hander
         #endif // IP4
         #ifdef IP6
         static IP6* m_pIpv6; //!< Pointer to IPV6 protocol hander

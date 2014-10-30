@@ -63,9 +63,9 @@
 		<ExtraCommands>
 			<Add after="avr-size -C --mcu=$(MCU) $(TARGET_OUTPUT_FILE)" />
 		</ExtraCommands>
+		<Unit filename="ipv4_unit_tests.cpp" />
+		<Unit filename="ipv4_unit_tests.h" />
 		<Unit filename="main.cpp" />
-		<Unit filename="tests.cpp" />
-		<Unit filename="tests.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />
