@@ -45,10 +45,10 @@ class IPV4
         *   @param  pNetmask Pointer to subnet mask (4 bytes). 0 for no change. Default = 0
         *   @return <i>bool</i> Returns true on success - actually always true
         */
-        void ConfigureStaticIp(byte * pIp,
-                            byte * pGw = 0,
-                            byte * pDns = 0,
-                            byte * pNetmask = 0);
+        void ConfigureStaticIp(Address *pIp,
+                            Address *pGw = 0,
+                            Address *pDns = 0,
+                            Address *pNetmask = 0);
 
         /** @brief  Configure network interface with DHCP
         */

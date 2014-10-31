@@ -5,9 +5,12 @@
 		<Project filename="ribanENC28J60.cbp">
 			<Depends filename="../ENC28J60/ENC28J60.cbp" />
 		</Project>
-		<Project filename="examples/tests.cbp">
+		<Project filename="examples/ribanenc28j60_unit_tests.cbp">
 			<Depends filename="../ENC28J60/ENC28J60.cbp" />
 			<Depends filename="ribanENC28J60.cbp" />
+		</Project>
+		<Project filename="../ENC28J60/examples/enc28j60_unit_tests.cbp">
+			<Depends filename="../ENC28J60/ENC28J60.cbp" />
 		</Project>
 	</Workspace>
 </CodeBlocks_workspace_file>

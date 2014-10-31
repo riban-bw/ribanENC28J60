@@ -1,34 +1,37 @@
-/*  Test application
+/*  Unit Test application
     Tests core functionality of ribanENC28J60
 */
 #include "Arduino.h"
 #include "include/ribanENC28J60.h"
-#include "tests.h"
+#include "ribanenc28j60_unit_tests.h"
 
 static const byte ETHERNET_CS_PIN = 10;
+byte pMac[6] = {0x12,0x34,0x56,0x78,0x9A,0xBC};
+Address g_addressMac(ADDR_TYPE_MAC, pMac);
+ribanENC28J60 g_nic(g_addressMac); //network interface
+
+bool g_bShowRx;
 
 /** Initialisation */
 void setup()
 {
-    g_pNIC = NULL;
+    g_bShowRx = false;
     Serial.begin(9600);
     Serial.println(F("ribanENC28J60 Unit Tests"));
-//    Serial.print(F("Test initialisation - "));
-//    Serial.println(TestInitialisation()?"Pass":"Fail");
+    Serial.print(F("Test initialisation - "));
+
+    Serial.println(TestInitialised()?"Pass":"Fail");
     ShowMenu();
 }
 
 /** Main program loop */
 void loop()
 {
-    if(g_pNIC)
+    byte nRxCnt = g_nic.Process();
+    if(g_bShowRx && nRxCnt != 0)
     {
-        byte nRxCnt = g_pNIC->Process();
-        if(nRxCnt)
-        {
-            Serial.print("Rx packets: ");
-            Serial.println(nRxCnt);
-        }
+        Serial.print("Rx packets: ");
+        Serial.println(nRxCnt);
     }
     if(Serial.available() > 0)
     {
@@ -41,12 +44,16 @@ void loop()
             case '1':
                 Serial.println(TestAddress()?"Pass":"Fail");
                 break;
+            case '2':
+                Serial.println(TestSetIp()?"Pass":"Fail");
+                break;
             case 'i':
-                Serial.print("Test NIC initialisation - ");
-                Serial.println(TestInitialisation()?"Pass":"Fail");
+                Serial.print("Test NIC initialised - ");
+                Serial.println(TestInitialised()?"Pass":"Fail");
                 break;
             case 'r':
-                setup();
+                g_bShowRx = !g_bShowRx;
+                Serial.println(g_bShowRx?"Showing Rx messages":"Hiding Rx messages");
                 break;
             case 'u':
 //                Socket socket(&nic, SOCK_UDP);
@@ -65,8 +72,9 @@ void ShowMenu()
 {
     Serial.println("Menu");
     Serial.println("1 - Test Address");
+    Serial.println("2 - Set Address");
     Serial.println("i - Initialise");
-    Serial.println("r - Reset");
+    Serial.println("r - Toggle display of recieved packets");
 }
 
 bool TestAddress()
@@ -255,21 +263,32 @@ bool TestAddress()
     return bResult;
 }
 
-bool TestInitialisation()
+bool TestInitialised()
 {
-    if(g_pNIC)
-        delete g_pNIC;
-    byte pMac[6] = {0x12,0x34,0x56,0x78,0x9A,0xBC};
-    Address addressMAC(ADDR_TYPE_MAC, pMac);
-    addressMAC.PrintAddress(); Serial.println();
-    g_pNIC = new ribanENC28J60(addressMAC, ETHERNET_CS_PIN);
-    //Check ENC28J60 object created, it has non-zero version (has been initialised) and that it has the same hardware address as we requested
-    return g_pNIC && (0 != g_pNIC->GetNicVersion()) && (addressMAC == g_pNIC->GetMac()->GetAddress());
+    //Check ENC28J60 has non-zero version (has been initialised) and that it has the same hardware address as we requested
+    return (0 != g_nic.GetNicVersion()) && (g_addressMac == g_nic.GetMac()->GetAddress());
 }
 
 bool TestSendIPV4()
 {
-    if(!g_pNIC)
-        TestInitialisation();
+    //!@todo Implement TestSendIPV4
+    return false;
+}
+
+bool TestTxError()
+{
+    //!@todo Implement TestTxError
+    //Can send packet larger than ENC28J60 maximum packet length
+    return false;
+}
+
+bool TestSetIp()
+{
+    byte pIp[4] = {192,168,0,88};
+    Address addressIP(ADDR_TYPE_IPV4, pIp);
+    g_nic.ipv4.ConfigureStaticIp(&addressIP);
+    Serial.print("Set IP to ");
+    g_nic.ipv4.GetIp()->PrintAddress();
+    Serial.println();
     return true;
 }

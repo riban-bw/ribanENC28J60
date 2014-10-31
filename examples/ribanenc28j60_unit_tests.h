@@ -1,4 +1,4 @@
-/** ribanENC28J60 Unit Test s
+/** ribanENC28J60 Unit Tests
 *   Unit tests for the network interface
 */
 
@@ -11,14 +11,23 @@ void ShowMenu();
 */
 bool TestAddress();
 
-/** @brief  Test that nic initialises without error and GetMac() works
+/** @brief  Test that nic has initialised without error and GetMac() works
 *   @return True on success
 */
-bool TestInitialisation();
+bool TestInitialised();
 
 /** @brief  Test sending IPV4 packet
 *   @return True on success
 */
 bool TestSendIPV4();
 
-ribanENC28J60* g_pNIC; //Pointer to the network interface
+/** @brief  Test transmission error reporting
+*   @return True on success
+*/
+bool TestTxError();
+
+/** @brief  Test setting IP address
+*   @return True on success
+*/
+bool TestSetIp();
+

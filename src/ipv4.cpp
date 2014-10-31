@@ -251,24 +251,24 @@ bool IPV4::ProcessIcmp(uint16_t nLen)
 //    }
 //}
 
-void IPV4::ConfigureStaticIp(byte *pIp,
-                             byte *pGw,
-                             byte *pDns,
-                             byte *pNetmask)
+void IPV4::ConfigureStaticIp(Address *pIp,
+                             Address *pGw,
+                             Address *pDns,
+                             Address *pNetmask)
 {
     m_nDhcpStatus = DHCP_DISABLED;
     if(pIp != 0)
-        m_addressLocal.SetAddress(pIp);
+        m_addressLocal.SetAddress(pIp->GetAddress());
     if(pGw != 0)
     {
-        memcpy(m_aArpTable[ARP_GATEWAY_INDEX].ip, pGw, 4);
+        memcpy(m_aArpTable[ARP_GATEWAY_INDEX].ip, pGw->GetAddress(), 4);
         //!@todo lookup gw mac
     }
     if(pDns != 0)
-        memcpy(m_aArpTable[ARP_DNS_INDEX].ip, pDns, 4);
+        memcpy(m_aArpTable[ARP_DNS_INDEX].ip, pDns->GetAddress(), 4);
         //!@todo lookup dns gw
     if(pNetmask != 0)
-        m_addressMask.SetAddress(pNetmask);
+        m_addressMask.SetAddress(pNetmask->GetAddress());
     //Update broadcast address
     for(byte i = 0; i < 4; ++i)
         m_addressBroadcast.GetAddress()[i] = m_addressLocal.GetAddress()[i] | ~m_addressMask.GetAddress()[i];

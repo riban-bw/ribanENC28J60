@@ -68,9 +68,6 @@ class ribanENC28J60
         */
         byte GetNicVersion();
 
-        /** @brief  Set static IP address
-        *   @param  Address
-
         /** @brief  Process recieved data and send any pending data
         *   @return <i>byte</i> Quantity of packets processed (including unrecognised and invalid packets)
         *   @note   Processes default protocols then iterates through sockets then drops unprocessed packets

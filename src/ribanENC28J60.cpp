@@ -3,23 +3,19 @@
 #include <Arduino.h>
 
 ribanENC28J60::ribanENC28J60(Address& addressMac, byte nChipSelectPin) :
+    #ifdef IP4
+    ipv4(&m_nic),
+    #endif // IP4
+    #ifdef IP6
+    ipv6(&m_nic),
+    #endif // IP6
     m_nChipSelectPin(nChipSelectPin),
-    m_nNicVersion(0),
-    ipv4(&m_nic)
+    m_nNicVersion(0)
 {
     m_pHandleTxError = NULL;
     m_pRemoteMac = new Address(ADDR_TYPE_MAC);
     m_pLocalMac = new Address(ADDR_TYPE_MAC, addressMac.GetAddress());
     m_nNicVersion = m_nic.Initialize(addressMac.GetAddress(), nChipSelectPin);
-
-    #ifdef IP4
-//    m_pIpv4 = new IPV4(&m_nic);
-    Serial.println("Initialised IPV4 handler");
-    #endif // IP4
-    #ifdef IP6
-    m_pIpv6 = new IPV6(&m_nic);
-    Serial.println("Initialised IPV6 handler");
-    #endif // IP6
 }
 
 ribanENC28J60::~ribanENC28J60()

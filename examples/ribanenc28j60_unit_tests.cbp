@@ -2,7 +2,7 @@
 <CodeBlocks_project_file>
 	<FileVersion major="1" minor="6" />
 	<Project>
-		<Option title="tests" />
+		<Option title="ribanENC28J60 Unit Tests" />
 		<Option pch_mode="2" />
 		<Option compiler="avr-gcc" />
 		<Build>
@@ -63,9 +63,9 @@
 		<ExtraCommands>
 			<Add after="avr-size -C --mcu=$(MCU) $(TARGET_OUTPUT_FILE)" />
 		</ExtraCommands>
-		<Unit filename="ipv4_unit_tests.cpp" />
-		<Unit filename="ipv4_unit_tests.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="ribanenc28j60_unit_tests.cpp" />
+		<Unit filename="ribanenc28j60_unit_tests.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />
