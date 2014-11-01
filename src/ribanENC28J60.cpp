@@ -2,27 +2,22 @@
 #include "enc28j60.h"
 #include <Arduino.h>
 
-ribanENC28J60::ribanENC28J60(Address& addressMac, byte nChipSelectPin) :
+bool ribanENC28J60::Initialise(Address &addressMac, byte nChipSelectPin)
+{
+    m_nChipSelectPin = nChipSelectPin;
+    m_nNicVersion = 0;
     #ifdef IP4
-    ipv4(&m_nic),
+    ipv4.Initialise(&m_nic),
     #endif // IP4
     #ifdef IP6
-    ipv6(&m_nic),
+    ipv6.Initialise(&m_nic),
     #endif // IP6
-    m_nChipSelectPin(nChipSelectPin),
-    m_nNicVersion(0)
-{
     m_pHandleTxError = NULL;
-    m_pRemoteMac = new Address(ADDR_TYPE_MAC);
-    m_pLocalMac = new Address(ADDR_TYPE_MAC, addressMac.GetAddress());
+    m_addressLocalMac = addressMac;
     m_nNicVersion = m_nic.Initialize(addressMac.GetAddress(), nChipSelectPin);
+    return (0 != m_nNicVersion);
 }
 
-ribanENC28J60::~ribanENC28J60()
-{
-    delete m_pRemoteMac;
-    delete m_pLocalMac;
-}
 
 byte ribanENC28J60::GetNicVersion()
 {
@@ -41,8 +36,10 @@ byte ribanENC28J60::Process()
         {
             //Get Ethertype from Ethernet header - ignore destination and source MAC for now
             uint16_t nType = m_nic.RxGetWord(MAC_OFFSET_TYPE);
+            #ifdef _DEBUG_
             Serial.print("Rx packet type: ");
             Serial.println(nType);
+            #endif // _DEBUG_
             switch(nType)
             {
                 #ifdef IP4
@@ -103,14 +100,14 @@ void ribanENC28J60::SetTxErrorHandler(void (*HandleTxError)())
     m_pHandleTxError = HandleTxError;
 }
 
-void ribanENC28J60::TxBegin(byte* pDestination)
+void ribanENC28J60::TxBegin(Address* pMac, uint16_t nEthertype)
 {
-    m_nic.TxBegin();
-    if(pDestination)
-        m_nic.TxAppend(pDestination, 6);
-    else
-        m_nic.TxAppend(m_pRemoteMac->GetAddress(), 6);
-    m_nic.TxAppend(m_pLocalMac->GetAddress(), 6);
+    m_nic.TxBegin(pMac?pMac->GetAddress():NULL, nEthertype);
+}
+
+bool ribanENC28J60::TxAppend(byte* pData, uint16_t nLen)
+{
+    return m_nic.TxAppend(pData, nLen);
 }
 
 void ribanENC28J60::TxEnd()

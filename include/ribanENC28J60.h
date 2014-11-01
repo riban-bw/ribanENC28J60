@@ -52,16 +52,12 @@ class ribanENC28J60
 {
     friend class Socket;
     public:
-        /** @brief  Construct an interface
+        /** @brief  Initialise the interface
         *   @param  addressMAC The MAC address for the network interface
         *   @param  nChipSelectPin Arduino pin number used as chip select. Default = 10.
-        *   @todo   Should constructor and begin() be seperate?
+        *   @return <i>bool</i> True on success
         */
-        ribanENC28J60(Address& addressMAC, byte nChipSelectPin = 10);
-
-        /** @brief  Destructs interface and tidies up
-        */
-        virtual ~ribanENC28J60();
+        bool Initialise(Address &addressMAC, byte nChipSelectPin = 10);
 
         /** @brief  Get the ENC28J60 silicon version
         *   @return <i>byte</i> Version. Zero if not correctly initialised
@@ -83,16 +79,33 @@ class ribanENC28J60
         /** @brief  Get the local hardware (MAC) address
         *   @return <i>Address*</i> Pointer to the MAC address
         */
-        Address* GetMac() { return m_pLocalMac; };
+        Address* GetMac() { return &m_addressLocalMac; };
 
-        /** @brief  Starts a transmission transaction
-        *   @param  pDestination Pointer to the 6 byte destination MAC address
+        /** @brief  Starts a raw transmission transaction
+        *   @param  pMac Optional pointer to remote host MAC address. Default is broadcast address FF:FF:FF:FF:FF:FF
+        *   @param  nEthertype Optional Ethertype or length of this Ethernet packet. Default is 0x0800 (IPV4)
+        *   @note   Call TxAppend to append data to the transmission transaction
+        *   @note   Call TxEnd to close transaction and send packet
         */
-        void TxBegin(byte* pDestination);
+        void TxBegin(Address* pMac = NULL, uint16_t nEthertype = 0x0800);
+
+        /** @brief  Appends data to a raw transmission transaction
+        *   @param  pData Pointer to data to append
+        *   @param  nLen Quantity of bytes to append
+        *   @return <i>bool</i> True on success. False if insufficient space left in Tx buffer
+        *   @note   Call TxBegin before appending data
+        *   @note   Call TxEnd to complete transaction and send packet
+        */
+        bool TxAppend(byte* pData, uint16_t nLen);
 
         /** @brief  Ends a transmission transaction
         */
         void TxEnd();
+
+        /** @brief  Gets transmission error
+        *   @return <i>byte</i> Bitwise flag of transmission errors
+        */
+        byte TxGetError() { return m_nic.TxGetError(); }
 
         #ifdef IP4
         IPV4 ipv4;
@@ -114,8 +127,8 @@ class ribanENC28J60
         */
         void RemoveSocket(Socket* pSocket);
 
-        Address* m_pLocalMac; //!< Pointer to local host hardware MAC address
-        Address* m_pRemoteMac; //!< Pointer to remote host hardware MAC address
+        Address m_addressLocalMac; //!< Pointer to local host hardware MAC address
+        Address m_addressRemoteMac; //!< Pointer to remote host hardware MAC address
 
     private:
 
@@ -134,10 +147,4 @@ class ribanENC28J60
 
         ENC28J60 m_nic; //!< ENC28J60 network interface object
         byte m_nNicVersion; //!< ENC28J60 silicon version - zero if ENC28J60 not initialised succesfully
-        #ifdef IP4
-//        IPV4* m_pIpv4; //!< Pointer to IPV4 protocol hander
-        #endif // IP4
-        #ifdef IP6
-        static IP6* m_pIpv6; //!< Pointer to IPV6 protocol hander
-        #endif // IP6
 };

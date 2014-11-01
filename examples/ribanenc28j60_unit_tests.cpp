@@ -19,8 +19,8 @@ void setup()
     Serial.begin(9600);
     Serial.println(F("ribanENC28J60 Unit Tests"));
     Serial.print(F("Test initialisation - "));
-
     Serial.println(TestInitialised()?"Pass":"Fail");
+    g_nic.SetTxErrorHandler(HandleTxError);
     ShowMenu();
 }
 
@@ -51,11 +51,38 @@ void loop()
                 Serial.print("Test NIC initialised - ");
                 Serial.println(TestInitialised()?"Pass":"Fail");
                 break;
+            case 'p':
+                {
+                    byte pIp[] = {192,168,0,6};
+                    Address addressIp(ADDR_TYPE_IPV4, pIp);
+                    g_nPingSequence = g_nic.ipv4.Ping(&addressIp, HandleEchoResponse);
+                    Serial.println(F("Ping sent to 192.168.0.6"));
+                    g_nTime = millis();
+                }
+                break;
             case 'r':
                 g_bShowRx = !g_bShowRx;
                 Serial.println(g_bShowRx?"Showing Rx messages":"Hiding Rx messages");
                 break;
+            case 's':
+                {
+                    byte pBroadcast[] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+                    Address addressMac(ADDR_TYPE_MAC, pBroadcast);
+                    byte pBuffer[] = {'H','e','l','l','o',' ','A','r','d','u','i','n','o'};
+                    g_nic.TxBegin(&addressMac, sizeof(pBuffer)); //Start Tx, setting broadcast destination and raw Ethernet packet size 13
+                    g_nic.TxAppend(pBuffer, sizeof(pBuffer));
+                    g_nic.TxEnd();
+                }
+                break;
             case 'u':
+                {
+                    byte pBroadcast[] = {255,255,255,255};
+                    Address addressBroadcast(ADDR_TYPE_IPV4, pBroadcast);
+                    byte pBuffer[] = {'H','e','l','l','o',' ','A','r','d','u','i','n','o'};
+                    g_nic.ipv4.TxBegin(&addressBroadcast, IP_PROTOCOL_UDP);
+                    g_nic.ipv4.TxAppend(pBuffer, sizeof(pBuffer));
+                    g_nic.ipv4.TxEnd();
+                }
 //                Socket socket(&nic, SOCK_UDP);
 //
 //                byte pData[5] = {'h','e','l','l','o'};
@@ -70,11 +97,13 @@ void loop()
 
 void ShowMenu()
 {
-    Serial.println("Menu");
-    Serial.println("1 - Test Address");
-    Serial.println("2 - Set Address");
-    Serial.println("i - Initialise");
-    Serial.println("r - Toggle display of recieved packets");
+    Serial.println(F("Menu"));
+    Serial.println(F("1 - Test Address"));
+    Serial.println(F("2 - Set Address"));
+    Serial.println(F("i - Initialise"));
+    Serial.println(F("r - Toggle display of recieved packets"));
+    Serial.println(F("s - Send raw Ethernet broadcast with content 'Hello Arduino'"));
+    Serial.println(F("u - Send UDP broadcast with content 'Hello Arduino'"));
 }
 
 bool TestAddress()
@@ -278,7 +307,7 @@ bool TestSendIPV4()
 bool TestTxError()
 {
     //!@todo Implement TestTxError
-    //Can send packet larger than ENC28J60 maximum packet length
+    //Can't find a way to force error - there are safe guards in the library to limit frame size
     return false;
 }
 
@@ -291,4 +320,39 @@ bool TestSetIp()
     g_nic.ipv4.GetIp()->PrintAddress();
     Serial.println();
     return true;
+}
+
+void HandleTxError()
+{
+    Serial.print("Tx Error ");
+    byte nError = g_nic.TxGetError();
+    if(nError & ENC28J60_TXERROR_CRC)
+        Serial.println(F("Tx CRC error"));
+    if(nError & ENC28J60_TXERROR_LEN)
+        Serial.println(F("Tx frame length error"));
+    if(nError & ENC28J60_TXERROR_SIZE)
+        Serial.println(F("Tx error packet too long"));
+    if(nError & ENC28J60_TXERROR_DEFER)
+        Serial.println(F("Tx error packet(s) deferred "));
+    if(nError & ENC28J60_TXERROR_EXCESS_DEFER)
+        Serial.println(F("Tx error packets deferred in excess of 24,287 bit times (2.4287 ms)"));
+    if(nError & ENC28J60_TXERROR_COLL)
+        Serial.println(F("Tx aborted after number of collisions exceeded retransmission maximum"));
+    if(nError & ENC28J60_TXERROR_LATE_COLL)
+        Serial.println(F("Tx error collision occurred beyond the collision window"));
+    if(nError & ENC28J60_TXERROR_GIANT)
+        Serial.println(F("Tx error frame byte count was greater than maximum frame size"));
+}
+
+void HandleEchoResponse(uint16_t nSequence)
+{
+    Serial.print("Echo response (pong) recieved from ");
+    Address addressRemote(ADDR_TYPE_IPV4);
+    g_nic.ipv4.GetRemoteIp(addressRemote);
+    addressRemote.PrintAddress();
+    Serial.print("after ");
+    Serial.print(millis() - g_nTime);
+    Serial.print("ms. Sequence number ");
+    Serial.print(nSequence);
+    Serial.println((nSequence == g_nPingSequence)?"Pass":"Fail");
 }

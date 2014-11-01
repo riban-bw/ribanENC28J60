@@ -52,9 +52,10 @@ bool Address::operator!=(byte* pAddress)
 
 Address& Address::operator=(Address& address)
 {
-    //!@todo Check for same type
-    m_nSize = address.m_nSize; //!@todo This corrupts memory for different types
+    delete m_pAddress;
+    m_nSize = address.m_nSize;
     m_nType = address.m_nType;
+    m_pAddress = new byte[m_nSize];
     memcpy(m_pAddress, address.m_pAddress, m_nSize);
     return *this;
 }

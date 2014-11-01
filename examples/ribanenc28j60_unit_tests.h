@@ -2,6 +2,15 @@
 *   Unit tests for the network interface
 */
 
+/** @brief  Handle Tx errors
+*/
+void HandleTxError();
+
+/** @brief  Handle Ping responses
+*   @param  nSequence Ping sequence number
+*/
+void HandleEchoResponse(uint16_t nSequence);
+
 /** @brief  Show the test menu on serial port
 */
 void ShowMenu();
@@ -16,11 +25,6 @@ bool TestAddress();
 */
 bool TestInitialised();
 
-/** @brief  Test sending IPV4 packet
-*   @return True on success
-*/
-bool TestSendIPV4();
-
 /** @brief  Test transmission error reporting
 *   @return True on success
 */
@@ -31,3 +35,20 @@ bool TestTxError();
 */
 bool TestSetIp();
 
+/** @brief  Test transmitting raw packet
+*   @return True on success
+*/
+bool TestSendRaw();
+
+//IPV4 tests
+/** @brief  Test sending IPV4 packet
+*   @return True on success
+*/
+bool TestSendIPV4();
+
+/** @brief  Send UDP packet
+*   @return True on success
+*/
+
+uint16_t g_nTime; //Used to measure asyncronous events
+uint16_t g_nPingSequence; //Ping sequence number

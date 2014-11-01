@@ -3,18 +3,22 @@
 #pragma once
 #include "Arduino.h"
 
-static const byte ADDR_TYPE_MAC = 0;
-static const byte ADDR_TYPE_IPV4 = 1;
-static const byte ADDR_TYPE_IPV6 = 2;
+static const byte ADDR_TYPE_NONE    = 0;
+static const byte ADDR_TYPE_MAC     = 1;
+static const byte ADDR_TYPE_IPV4    = 2;
+static const byte ADDR_TYPE_IPV6    = 3;
 
 class Address
 {
     public:
         /** @brief  Create an instance of an address
-        *   @param  nType Address type: ADDR_TYPE_MAC | ADDR_TYPE_IPV4 | ADDR_TYPE_IPV6
+        *   @param  nType Address type: ADDR_TYPE_NONE | ADDR_TYPE_MAC | ADDR_TYPE_IPV4 | ADDR_TYPE_IPV6
         *   @param  pAddress Pointer to buffer holding new address. Default is empty (null) address
         */
-        Address(byte nType, byte* pAddress = 0);
+        Address(byte nType = ADDR_TYPE_NONE, byte* pAddress = 0);
+
+        //!@todo Implement Address constructor which takes {} defined array, e.g. Address(ADDR_TYPE_IPV4, {192,168,0,1});
+        //!@todo Implement Address constructor which takes string address, e.g. Address(ADDR_TYPE_IPV4, "192.168.0.1"});
 
         virtual ~Address();
 

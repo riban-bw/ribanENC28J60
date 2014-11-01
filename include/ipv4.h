@@ -36,7 +36,12 @@ class IPV4
         /** @brief  Construct an IPV4 protocol handler
         *   @param  pInterface Pointer to the network interface object
         */
-        IPV4(ENC28J60* pInterface);
+        IPV4();
+
+        /** @brief  Initialise IPV4 class
+        *   @param  pInterface Pointer to the network interface object
+        */
+        void Initialise(ENC28J60* pInterface);
 
         /** @brief  Configure network interface with static IP
         *   @param  pIp Pointer to IP address (4 bytes). 0 for no change.
@@ -89,7 +94,7 @@ class IPV4
         */
         void TxWrite(uint16_t nOffset, byte nData);
 
-        /** @brief  Write a two byte word to specific position in write buffer
+        /** @brief  Write a 16-bit word to specific position in write buffer
         *   @param  nOffset Position offset from start of IPV4 payload
         *   @param  nData Data to write
         *   @note   nData is host byte order, word is written network byte order, i.e. bytes are swapped before writing to buffer
@@ -135,7 +140,7 @@ class IPV4
         *   @note   Handler function should be declared: void HandleEchoResponse(uint16_t nSequence); where nSequence is the echo response sequence number
         *   @todo   Add ping parameters, e.g. quantity of pings, response handler, etc.
         */
-        uint16_t Ping(byte* pIp, void (*HandleEchoResponse)(uint16_t nSequence));
+        uint16_t Ping(Address* pIp, void (*HandleEchoResponse)(uint16_t nSequence));
 
         /** @brief  Enable / disable ICMP (ping) responses
         *   @param  bEnable True to enable, false to disable
@@ -155,6 +160,13 @@ class IPV4
         byte* GetDns() { return m_aArpTable[ARP_DNS_INDEX].ip; };
         Address* GetNetmask() { return &m_addressMask; };
         Address* GetBroadcastIp() { return &m_addressBroadcast; };
+
+        /** @brief  Get the IP address of the remote host from the last recieved packet
+        *   @param  address Address object to populate
+        *   @brief  Implement GetRemoteIp
+        */
+        void GetRemoteIp(Address& address);
+
         bool IsUsingDhcp() { return m_nDhcpStatus != DHCP_DISABLED; };
 
     protected:
