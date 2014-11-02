@@ -60,7 +60,7 @@ class IPV4
         void ConfigureDhcp();
 
         /** @brief  Starts a transmission transaction
-        *   @param  pDestination Pointer to the destination IP address. set to null to use source address in last recieved packet
+        *   @param  pDestination Pointer to the destination IP address. Set to null to use source address in last recieved packet
         *   @param  nProtocol IPV4 protocol number
         *   @note   Creates Ethernet and IP header. Clears checksum and length fields
         */

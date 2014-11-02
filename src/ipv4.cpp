@@ -27,17 +27,18 @@ void IPV4::Process(uint16_t nLen)
         return;
 
     byte nProtocol = m_pInterface->RxGetByte(MAC_HEADER_SIZE + IPV4_OFFSET_PROTOCOL);
-    uint16_t nHeaderLength = (m_pInterface->RxGetWord(MAC_HEADER_SIZE + IPV4_OFFSET_VERSION) & 0x0F) * 4;
+    m_nHeaderLength = (m_pInterface->RxGetByte(MAC_HEADER_SIZE + IPV4_OFFSET_VERSION) & 0x0F) * 4;
     uint16_t nPayload = m_pInterface->RxGetWord(MAC_HEADER_SIZE + IPV4_OFFSET_LENGTH);
-    if(nLen <= nPayload)
+    if(nLen < nPayload)
         return; //!@todo Should we indicate failure to process packet?
-    nPayload -= nHeaderLength;
+    nPayload -= m_nHeaderLength;
     byte nTmp;
-    m_pInterface->RxGetData(&nTmp, 1, MAC_HEADER_SIZE + nHeaderLength); //Position read cursor at payload
+    m_pInterface->RxGetData(&nTmp, 1, MAC_HEADER_SIZE + m_nHeaderLength); //Position read cursor at payload
     switch(nProtocol)
     {
         case IP_PROTOCOL_ICMP:
-            ProcessIcmp(nPayload);
+            if(m_bIcmpEnabled)
+                ProcessIcmp(nPayload);
             break;
         case IP_PROTOCOL_IGMP:
             #ifdef _DEBUG_
@@ -65,6 +66,9 @@ void IPV4::Process(uint16_t nLen)
 
 void IPV4::ProcessArp(uint16_t nLen)
 {
+    #ifdef _DEBUG_
+    Serial.println("IPV4::ProcessArp");
+    #endif // _DEBUG_
     if(nLen < ARP_IPV4_LEN)
         return;
     byte pBuffer[ARP_IPV4_LEN];
@@ -134,40 +138,50 @@ void IPV4::GetRemoteIp(Address& address)
 
 bool IPV4::ProcessIcmp(uint16_t nLen)
 {
+    #ifdef _DEBUG_
+    Serial.println("IPV4::ProcessIcmp");
+    #endif // _DEBUG_
     if(nLen < ICMP_HEADER_SIZE)
         return false;
-    byte pHeader[ICMP_HEADER_SIZE];
-    m_pInterface->RxGetData(pHeader, ICMP_HEADER_SIZE, MAC_HEADER_SIZE + m_nHeaderLength);
-    m_pInterface->DMACopy(0, 0, nLen);
-    m_pInterface->TxWriteWord(ICMP_OFFSET_CHECKSUM, 0);
-    if(m_pInterface->RxGetWord(MAC_HEADER_SIZE + m_nHeaderLength + ICMP_CHECKSUM_OFFSET) != m_pInterface->GetChecksum(0, ICMP_HEADER_SIZE))
+    m_pInterface->DMACopy(0, MAC_HEADER_SIZE + m_nHeaderLength, nLen); //Populate TxBuffer with ICMP header and payload (not Ethernet or IPV4 header)
+    m_pInterface->TxWriteWord(ICMP_OFFSET_CHECKSUM, 0); //Clear checksum field
+    uint16_t nRxChecksum = m_pInterface->RxGetWord(MAC_HEADER_SIZE + m_nHeaderLength + ICMP_OFFSET_CHECKSUM);
+    uint16_t nCalcChecksum = ENC28J60::SwapBytes(m_pInterface->GetChecksum(0, nLen)); //Calculate checksum of ICMP header and payload in TxBuffer
+    if(nRxChecksum != nCalcChecksum)
        return false; //Fails checksum
-    switch(pHeader[ICMP_OFFSET_TYPE])
+    #ifdef _DEBUG_
+    #endif // _DEBUG_
+    switch(m_pInterface->RxGetByte(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + ICMP_OFFSET_TYPE))
     {
         case ICMP_TYPE_ECHOREPLY:
             //This is a response to an echo request (ping) so call our hanlder if defined
+            #ifdef _DEBUG_
+            Serial.println("Echo reply");
+            #endif // _DEBUG_
             if(m_pHandleEchoResponse)
                 m_pHandleEchoResponse(m_pInterface->RxGetWord(MAC_HEADER_SIZE + m_nHeaderLength + 6)); //!@todo Pass parameters to handler?
             //!@todo This may be prone to DoS attack by targetting unsolicited echo responses at this host - may be less significant than limited recieve handling - Just check we are expecting it in handler?
             break;
         case ICMP_TYPE_ECHOREQUEST:
-            if(m_bIcmpEnabled)
-            {
-                //This is an echo request (ping) from a remote host so send an echo reply (pong)
-                //Reuse recieve buffer and send reply
-                m_pInterface->TxBegin();
-                m_pInterface->DMACopy(0, 0, MAC_HEADER_SIZE + IPV4_HEADER_SIZE + nLen); //!@todo This may fail because we copy Rx packet regardless of its header length
-                m_pInterface->TxSwap(MAC_OFFSET_DESTINATION, MAC_OFFSET_SOURCE, 6);
-                m_pInterface->TxSwap(IPV4_OFFSET_DESTINATION, IPV4_OFFSET_SOURCE, 4);
-                m_pInterface->TxWriteByte(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + ICMP_OFFSET_TYPE, ICMP_TYPE_ECHOREPLY);
-                m_pInterface->TxWriteWord(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + ICMP_OFFSET_CHECKSUM, 0);
-                m_pInterface->TxWriteWord(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + ICMP_OFFSET_CHECKSUM, m_pInterface->GetChecksum(MAC_HEADER_SIZE + IPV4_HEADER_SIZE, nLen));
-                //!@todo Should we use generic SendIP code?
-                m_pInterface->TxEnd();
-            }
+            //This is an echo request (ping) from a remote host so send an echo reply (pong)
+            #ifdef _DEBUG_
+            Serial.println("Echo request");
+            #endif // _DEBUG_
+            //Reuse recieve buffer and send reply
+            m_pInterface->TxBegin();
+            m_pInterface->DMACopy(0, 0, MAC_HEADER_SIZE + IPV4_HEADER_SIZE + nLen);
+            m_pInterface->TxSwap(MAC_OFFSET_DESTINATION, MAC_OFFSET_SOURCE, 6);
+            m_pInterface->TxSwap(MAC_HEADER_SIZE + IPV4_OFFSET_DESTINATION, MAC_HEADER_SIZE + IPV4_OFFSET_SOURCE, 4);
+            m_pInterface->TxWriteByte(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + ICMP_OFFSET_TYPE, ICMP_TYPE_ECHOREPLY);
+            m_pInterface->TxWriteWord(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + ICMP_OFFSET_CHECKSUM, 0);
+            m_pInterface->TxWriteWord(MAC_HEADER_SIZE + IPV4_HEADER_SIZE + ICMP_OFFSET_CHECKSUM, m_pInterface->GetChecksum(MAC_HEADER_SIZE + IPV4_HEADER_SIZE, nLen));
+            m_pInterface->TxEnd();
             break;
         default:
             //Unhandled message types
+            #ifdef _DEBUG_
+            Serial.println("Unhandled ICMP message");
+            #endif // _DEBUG_
             ;
     }
     return true; //Valid ICMP message
@@ -289,13 +303,27 @@ void IPV4::ConfigureStaticIp(Address *pIp,
 void IPV4::ConfigureDhcp()
 {
     m_nDhcpStatus = DHCP_RESET;
+    byte pNull[] = {0,0,0,0};
+    byte pBroadcast[] = {255,255,255,255};
+    m_addressBroadcast.SetAddress(pBroadcast);
+    m_addressLocal.SetAddress(pNull);
+    //!@todo Clear other addresses?
+    TxBegin(&m_addressBroadcast, IP_PROTOCOL_UDP);
+    TxAppend((uint16_t)68); //UDP source port
+    TxAppend((uint16_t)67); //UDP destination port
+    TxAppend(DHCP_PACKET_SIZE);
+    TxAppend(pNull, 2); //Clear checksum
     byte pPayload[DHCP_PACKET_SIZE] = {0x01, 0x01, 0x06, 0x00, 0x39, 0x03, 0xF3, 0x26};
-    memset(pPayload, 8, DHCP_PACKET_SIZE - 8);
+    m_pInterface->GetMac(pPayload + 8);
+    memset(pPayload, 0, DHCP_PACKET_SIZE - 18); //Pad rest of packet with null values up to magic packet
 //    memcpy(pPayload + 28, m_pLocalMac, 6);
     pPayload[DHCP_PACKET_SIZE - 4] = 0x63; //Magic packet
     pPayload[DHCP_PACKET_SIZE - 3] = 0x82;
     pPayload[DHCP_PACKET_SIZE - 2] = 0x53;
     pPayload[DHCP_PACKET_SIZE - 1] = 0x63;
+    TxAppend(pPayload, DHCP_PACKET_SIZE);
+    TxEnd();
+
     //!@todo Send UDP packet
     //!@todo Wait for offer
     //!@todo Send request

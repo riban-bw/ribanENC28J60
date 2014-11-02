@@ -35,6 +35,11 @@ bool TestTxError();
 */
 bool TestSetIp();
 
+/** @brief  Test DHCP configuration
+*   @return True on success
+*/
+bool TestDhcp();
+
 /** @brief  Test transmitting raw packet
 *   @return True on success
 */

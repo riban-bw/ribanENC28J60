@@ -37,8 +37,10 @@ byte ribanENC28J60::Process()
             //Get Ethertype from Ethernet header - ignore destination and source MAC for now
             uint16_t nType = m_nic.RxGetWord(MAC_OFFSET_TYPE);
             #ifdef _DEBUG_
+            Serial.print("Packet length: ");
+            Serial.println(nQuant);
             Serial.print("Rx packet type: ");
-            Serial.println(nType);
+            Serial.println(nType, HEX);
             #endif // _DEBUG_
             switch(nType)
             {

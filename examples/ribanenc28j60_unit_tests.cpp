@@ -6,9 +6,7 @@
 #include "ribanenc28j60_unit_tests.h"
 
 static const byte ETHERNET_CS_PIN = 10;
-byte pMac[6] = {0x12,0x34,0x56,0x78,0x9A,0xBC};
-Address g_addressMac(ADDR_TYPE_MAC, pMac);
-ribanENC28J60 g_nic(g_addressMac); //network interface
+ribanENC28J60 g_nic; //network interface
 
 bool g_bShowRx;
 
@@ -47,6 +45,9 @@ void loop()
             case '2':
                 Serial.println(TestSetIp()?"Pass":"Fail");
                 break;
+            case '3':
+                Serial.println(TestDhcp()?"Pass":"Fail");
+                break;
             case 'i':
                 Serial.print("Test NIC initialised - ");
                 Serial.println(TestInitialised()?"Pass":"Fail");
@@ -68,8 +69,10 @@ void loop()
                 {
                     byte pBroadcast[] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
                     Address addressMac(ADDR_TYPE_MAC, pBroadcast);
+                    byte pHeader[] = {0x00,0x00,0x03}; //LLC U-frame
                     byte pBuffer[] = {'H','e','l','l','o',' ','A','r','d','u','i','n','o'};
-                    g_nic.TxBegin(&addressMac, sizeof(pBuffer)); //Start Tx, setting broadcast destination and raw Ethernet packet size 13
+                    g_nic.TxBegin(&addressMac, 3 + sizeof(pBuffer)); //Start Tx, setting broadcast destination and raw Ethernet packet size 13
+                    g_nic.TxAppend(pHeader, 3);
                     g_nic.TxAppend(pBuffer, sizeof(pBuffer));
                     g_nic.TxEnd();
                 }
@@ -80,8 +83,13 @@ void loop()
                     Address addressBroadcast(ADDR_TYPE_IPV4, pBroadcast);
                     byte pBuffer[] = {'H','e','l','l','o',' ','A','r','d','u','i','n','o'};
                     g_nic.ipv4.TxBegin(&addressBroadcast, IP_PROTOCOL_UDP);
+                    byte pUdpHeader[] = {0x00,0x10,0x00,0x10,0x00,0x00,0x00,0x00};
+                    g_nic.ipv4.TxAppend(pUdpHeader, sizeof(pUdpHeader));
+                    uint16_t nLen = 8 + sizeof(pBuffer);
+                    g_nic.ipv4.TxWrite(4, nLen);
                     g_nic.ipv4.TxAppend(pBuffer, sizeof(pBuffer));
                     g_nic.ipv4.TxEnd();
+                    //!@todo Sending UDP sets wrong CRC value
                 }
 //                Socket socket(&nic, SOCK_UDP);
 //
@@ -100,6 +108,7 @@ void ShowMenu()
     Serial.println(F("Menu"));
     Serial.println(F("1 - Test Address"));
     Serial.println(F("2 - Set Address"));
+    Serial.println(F("3 - DHCP"));
     Serial.println(F("i - Initialise"));
     Serial.println(F("r - Toggle display of recieved packets"));
     Serial.println(F("s - Send raw Ethernet broadcast with content 'Hello Arduino'"));
@@ -294,8 +303,12 @@ bool TestAddress()
 
 bool TestInitialised()
 {
+    byte pMac[6] = {0x12,0x34,0x56,0x78,0x9A,0xBC};
+    Address addressMac(ADDR_TYPE_MAC, pMac);
+    g_nic.Initialise(addressMac, ETHERNET_CS_PIN);
+
     //Check ENC28J60 has non-zero version (has been initialised) and that it has the same hardware address as we requested
-    return (0 != g_nic.GetNicVersion()) && (g_addressMac == g_nic.GetMac()->GetAddress());
+    return (0 != g_nic.GetNicVersion()) && (addressMac == g_nic.GetMac()->GetAddress());
 }
 
 bool TestSendIPV4()
@@ -320,6 +333,12 @@ bool TestSetIp()
     g_nic.ipv4.GetIp()->PrintAddress();
     Serial.println();
     return true;
+}
+
+bool TestDhcp()
+{
+    g_nic.ipv4.ConfigureDhcp();
+    return false;
 }
 
 void HandleTxError()

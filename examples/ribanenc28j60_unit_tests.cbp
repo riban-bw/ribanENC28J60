@@ -63,11 +63,8 @@
 		<ExtraCommands>
 			<Add after="avr-size -C --mcu=$(MCU) $(TARGET_OUTPUT_FILE)" />
 		</ExtraCommands>
-		<Unit filename="deleteme.cpp" />
 		<Unit filename="main.cpp" />
-		<Unit filename="ribanenc28j60_unit_tests.cpp">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
+		<Unit filename="ribanenc28j60_unit_tests.cpp" />
 		<Unit filename="ribanenc28j60_unit_tests.h" />
 		<Extensions>
 			<code_completion />
