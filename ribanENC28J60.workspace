@@ -2,12 +2,13 @@
 <CodeBlocks_workspace_file>
 	<Workspace title="Workspace">
 		<Project filename="../ENC28J60/ENC28J60.cbp" />
+		<Project filename="../ribanTimer/ribanTimer.cbp" />
+		<Project filename="examples/ribanenc28j60_unit_tests.cbp">
+			<Depends filename="ribanENC28J60.cbp" />
+		</Project>
 		<Project filename="ribanENC28J60.cbp">
 			<Depends filename="../ENC28J60/ENC28J60.cbp" />
-		</Project>
-		<Project filename="examples/ribanenc28j60_unit_tests.cbp">
-			<Depends filename="../ENC28J60/ENC28J60.cbp" />
-			<Depends filename="ribanENC28J60.cbp" />
+			<Depends filename="../ribanTimer/ribanTimer.cbp" />
 		</Project>
 		<Project filename="../ENC28J60/examples/enc28j60_unit_tests.cbp">
 			<Depends filename="../ENC28J60/ENC28J60.cbp" />

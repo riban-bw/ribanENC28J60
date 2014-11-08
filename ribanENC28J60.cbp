@@ -36,6 +36,7 @@
 			<Add option="-DARDUINO=105" />
 			<Add directory="$(ARDUINO)/hardware/arduino/cores/arduino" />
 			<Add directory="/home/brian/src/arduino/Arduino/contrib/ENC28J60" />
+			<Add directory="/home/brian/src/arduino/Arduino/contrib/ribanTimer" />
 		</Compiler>
 		<Linker>
 			<Add option="-Wl,--gc-sections" />

@@ -26,6 +26,7 @@ byte ribanENC28J60::GetNicVersion()
 
 byte ribanENC28J60::Process()
 {
+    #define _DEBUG_
     if(0 == m_nNicVersion)
         return 0; //Not correctly initialised so do nothing
 

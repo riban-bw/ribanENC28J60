@@ -80,6 +80,7 @@ void Address::SetAddress(byte* pAddress)
 {
     memcpy(m_pAddress, pAddress, m_nSize);
 }
+
 byte Address::GetType()
 {
     return m_nType;
